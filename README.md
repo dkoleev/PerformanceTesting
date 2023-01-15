@@ -1,25 +1,25 @@
-# Проверка различных алгоритмов и структур данных на производительность.
-## В [данном](https://github.com/dkoleev/PerformanceTestingInUnity) репозитории примеры тестов в юнити.
+# Checking different algorithms and data structures for performance.
+## This [repository](https://github.com/dkoleev/PerformanceTestingInUnity) contains examples of tests in unity.
 
-Характеристики компьютера на котором производились замеры:
+Characteristics of the computer on which the measurements were taken:
 ![](https://github.com/dkoleev/PerformanceTesting/blob/master/Content/Images/pc_characteristic.png)
 
-## 1. Эксперементы с кэшем процессора.
-### Как локальность данных влияет на производительность.
-В данных примерах рассматривается пространственная локальность (также существует временная).
-### Немного теории прежде чем мы рассмотрим примеры.
-В [презентации](https://docs.google.com/presentation/d/1zKsVoWUkBRu50UW5VW505fWX-KwT3m5T3WY_SnTajcs/edit?usp=sharing) наглядно описано как устроена современная память и процессоры.
-Итак, что нам нужно знать об устройстве компьютера для того чтобы писать оптимизированные программы:
-+ Процессор чтобы начать вычисления не получает данные из памяти напрямую, а загружает данные из неё в свой кэш, а из кэша уже в регистры (если в кратце почему так - кэш реализован на основе технологии SRAM (быстро но дорого), основаня память на DRAM(медленно но дёшево)).
-+ Кэш процессора обычно состоит из нескольких уровней кэша (на некоторых уровнях кэш разделсяется между ядрами). Чем выше уровень тем выше скорость получения данных из него и тем он меньшего размера.
-+ Данные из основной памяти в кэш считываются не побайтово а чанками, размер которых обычно 64 байта (так называемые кэш линии)
+## 1. Experiments with the CPU cache.
+### How data locality affects performance.
+These examples deal with spatial locality (there is also temporal locality).
+### A little theory before we look at examples.
+The [presentation](https://docs.google.com/presentation/d/1zKsVoWUkBRu50UW5VW505fWX-KwT3m5T3WY_SnTajcs/edit?usp=sharing) clearly describes how modern memory and processors are constructed.
+So, what we need to know about the computer in order to write optimized programs:
++ To start calculations processor does not get data from memory directly but loads data from it into its cache and from cache into registers (in brief why - the cache is based on SRAM technology (fast but expensive), the main memory is based on DRAM (slow but cheap)).
++ The processor cache usually consists of several cache levels (in some levels the cache is split between cores). The higher the level, the higher the data retrieval speed from it and the smaller its size.
++ Data from main memory is read into the cache not byte-by-byte, but by chunks whose size is usually 64 bytes (so called cache lines)
 
-#### Пример 1.
-Имеется массив:
+#### Example 1.
+There is an array:
 ``` 
 int[] arr = new int[64 * 1024 * 1024];
 ```
-Два примера, в первом пробегаемся по каждому 16-му элементу, а во втором по каждому первому:
+Two examples, in the first we run through every 16th element, and in the second through every first element:
 ```
 for (int i = 0; i < arr.Length; i += 16)
   arr[i] *= 3;
@@ -27,17 +27,17 @@ for (int i = 0; i < arr.Length; i += 16)
 for (int i = 0; i < arr.Length; i++) 
   arr[i] *= 3;
   ```
-  Можно предположить что первый цикл отработает быстрее, но как показывают замеры, оба цикла занимают практически одинаковое количество циклов процессора (замеры проведены с помощью программы [vTune](https://software.intel.com/en-us/vtune)).
+  It can be assumed that the first cycle will work faster, but as measurements show, both cycles take almost the same number of CPU cycles (measurements conducted by the program [vTune](https://software.intel.com/en-us/vtune)).
   ![](https://github.com/dkoleev/PerformanceTesting/blob/master/Content/Images/result_1.png) 
   <br>
-  Данный пример наглядно показывает, что основное время тратится не на вычисления, а на получение данных из памяти.
+  This example clearly shows that the main time is spent not on calculations, but on getting data from memory.
   <br>
   #### Пример 2.
-  Имеется двумерный массив:
+  There is a two-dimensional array:
   ```
   protected static int[,] Matrix;
   ```
-  В первом случае мы пробегаемся по строкам:
+  In the first case, we run through the lines:
   ```
        public override void Run(int cicles)
         {
@@ -50,7 +50,7 @@ for (int i = 0; i < arr.Length; i++)
             }
         }
  ```
- Во втором по столбцам:
+In the second example, we run through the columns:
  ```
   public override void Run(int cicles)
         {
@@ -63,29 +63,29 @@ for (int i = 0; i < arr.Length; i++)
             }
         }
 ```
-Результат при пробеге по строкам:
+The result when you run through the rows:
 <br>
 ![](https://github.com/dkoleev/PerformanceTesting/blob/master/Content/Images/res_2.png)
 <br>
-Результат при пробеге по столбацам:
+The result when you run through the columns:
 <br>
 ![](https://github.com/dkoleev/PerformanceTesting/blob/master/Content/Images/res_column.png)
 <br>
-В данных замерах стоит обращать внимание только на показатель Memory Bound. Как мы видим при проходе по строкам производительность выше более чем в два раза. Также если посмотреть на графики мы увидим, что при проходе по столбцам в нашем случае самым узким местом является кэш третьего уровня 39,3% затем идет основная память 14,6%.
+In these measurements, we should pay attention only to the Memory Bound indicator. As we can see the performance is more than twice as high when passing through the rows. Also, if you look at the graphs, we see that the bottleneck in our case is the third level cache 39.3%, then comes the main memory 14.6%.
 <br>
-Почему именно кэш третьего уровня стал самым узким местом а не основная память? Потому что тот объём данных на котором производились замеры помещается в кэш третьего уровня. Поэтому также различие в скорости не столь разитильно, ведь доступ к кэшу третьего уровня намного быстрее чем к основной памяти.
+Why was the third level cache the bottleneck and not the main memory? Because the amount of data on which the measurements were made is placed in the third level cache. Therefore, also the difference in speed is not so different, because access to the third level cache is much faster than to the main memory.
 <br>
-Данный пример наглядно показывает насколько важно последтовательное расположение и чтение данных из памяти. Из-за того что данные из памяти и из одного уровня кэша в другой считываются не побайтово а кэш-линиями, при чтении данных столбцами кэши забиваются бесполезными данными, которые не учавствуют в вычислениях и соответсвенно быстрее забиваются, что приводит к необходимости чаще запрашивать данные из более медленной памяти.
+This example clearly shows the importance of sequential location and reading data from memory. Because data from memory and from one cache level to another is read not byte-by-byte but by cache lines, when reading data by columns, the caches get clogged with useless data which do not participate in calculations and, consequently, get clogged faster, which leads to necessity of requesting data from slower memory more often.
 <br>
 ![](https://github.com/dkoleev/PerformanceTesting/blob/master/Content/Images/row_column.png)
 <br>
-В конечном счёте всё сводится к одной простой мысли:
+In the end, it all comes down to one simple thought:
 <br>
-### Когда процессор выполняет чтение из памяти, он считывает целую строку кэша. Чем больше мы поместим в эту строку кэша полезных данных, тем большую скорость мы получим. Так что наша цель заключается в том, чтобы организовать структуры данных таким образом, чтобы обрабатываемые нами вещи находились в памяти одна за другой.
+### When the processor performs a read from memory, it reads an entire line of cache. The more useful data we put in that cache line, the faster we will get. So our goal is to organize our data structures so that the things we process are in memory one by one.
 
 
-## Горячее холодное разделение (hot/cold splitting)
-Даже в ситуации когда у нас данные находятся в линейном массиве данных и количество кэш-промахов минимально, у нас всё равно могут быть данные внутри сущности, которые мы используем крайне редко, но при этом они постоянно загружаются в кэш. В результате, каждая сущность увеличивается, а количество помещающихся в строку кэша сущностей уменьшается. Для решения этой проблемы существует метод холодного/горячего разделения.
-Идея заключается в разделении данных на две части. Первая хранит "горячие" данные: состояния, которые мы используем на каждом кадре. Вторая хранит "холодные" данные: все остальное, что используется значительно реже.
-Горячая часть - это основа объекта, тебе данные которые мы постоянно используем в логике и храним в самой сущности, чтобы избежать гонку указателей.
-Холодная часть - то к чему мы обращаемся редко. Мы храним ссылку на ней в основной части, т.е. Связываем её с сущностью посредством композиции (пр. Паттерн Стратегия).
+## hot/cold splitting.
+Even in a situation where we have data in a linear data array and the number of cache misses is minimal, we may still have data inside an entity that we use very rarely, but it is constantly loaded into the cache. As a result, each entity increases and the number of entities that fit in the cache line decreases. To solve this problem, there is a cold/hot split method.
+The idea is to divide the data into two parts. The first stores the "hot" data: the states that we use on every frame. The second stores the "cold" data: everything else that is used much less frequently.
+The hot part is the backbone of the entity, you have data that we use all the time in the logic and store in the entity itself to avoid a pointer race.
+The cold part is something we rarely refer to. We keep a reference to it in the main part, i.e., we link it to the entity by means of composition (Pattern Strategy).
