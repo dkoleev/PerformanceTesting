@@ -32,7 +32,7 @@ for (int i = 0; i < arr.Length; i++)
   <br>
   This example clearly shows that the main time is spent not on calculations, but on getting data from memory.
   <br>
-  #### Пример 2.
+  #### Example 2.
   There is a two-dimensional array:
   ```
   protected static int[,] Matrix;
